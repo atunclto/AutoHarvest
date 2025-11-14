@@ -1,0 +1,5 @@
+consume-seed-on-replant: true
+enable-cocoa-full-orientation: false
+world-blacklist: []
+permission-require: false
+permission-node: autoharvest.use

@@ -1,0 +1,5 @@
+name: AutoHarvest
+main: com.daniel.autoharvest.AutoHarvestPlugin
+version: 1.0
+api-version: 1.21
+description: Cosecha con un click y replant automático si tienes semillas.
