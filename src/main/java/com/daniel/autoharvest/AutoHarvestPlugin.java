@@ -36,7 +36,7 @@ public class AutoHarvestPlugin extends JavaPlugin implements Listener {
     @Override
     public void onEnable() {
         Bukkit.getPluginManager().registerEvents(this, this);
-        getLogger().info("[AutoHarvest] Activado (3x3, mano vacía o azada).");
+        getLogger().info("[AutoHarvest] Activado (1x1, con cualquier objeto en mano).");
     }
 
     @Override
@@ -58,30 +58,29 @@ public class AutoHarvestPlugin extends JavaPlugin implements Listener {
         if (!SEED_MAP.containsKey(clickedMat)) return;
 
         Player player = event.getPlayer();
-        ItemStack inHand = player.getInventory().getItemInMainHand();
-        Material inHandMat = (inHand == null) ? Material.AIR : inHand.getType();
 
-        // Solo permitir si mano vacía o una azada
-        if (!(inHandMat == Material.AIR || isHoe(inHandMat))) return;
+        // El cultivo clicado debe estar maduro y el jugador debe tener la semilla correspondiente
+        if (!(clicked.getBlockData() instanceof Ageable)) return;
+        Ageable clickedAge = (Ageable) clicked.getBlockData();
+        if (clickedAge.getAge() < clickedAge.getMaximumAge()) return; // no maduro
 
-        // Cancelamos la interacción por defecto (evita efectos no deseados)
+        Material requiredSeed = SEED_MAP.get(clickedMat);
+        if (requiredSeed == null) return;
+        if (!hasOneSeed(player, requiredSeed)) return; // no hay semillas -> no actúa
+
+        // Cancelamos la interacción por defecto
         event.setCancelled(true);
 
         int harvested = 0;
         int replanted = 0;
 
-        // Recorremos 3x3 centrado en el bloque clicado
-        for (int dx = -1; dx <= 1; dx++) {
-            for (int dz = -1; dz <= 1; dz++) {
+        // SOLO 1x1: trabajo únicamente sobre el bloque clicado
+        Block b = clicked;
+        Material type = b.getType();
 
-                Block b = clicked.getRelative(dx, 0, dz);
-                Material type = b.getType();
-
-                if (!SEED_MAP.containsKey(type)) continue;
-                if (!(b.getBlockData() instanceof Ageable)) continue;
-
-                Ageable ageable = (Ageable) b.getBlockData();
-                if (ageable.getAge() < ageable.getMaximumAge()) continue; // no maduro
+        if (SEED_MAP.containsKey(type) && b.getBlockData() instanceof Ageable) {
+            Ageable ageable = (Ageable) b.getBlockData();
+            if (ageable.getAge() >= ageable.getMaximumAge()) {
 
                 // Obtener drops usando la herramienta en mano del jugador
                 Collection<ItemStack> drops = b.getDrops(player.getInventory().getItemInMainHand());
@@ -121,21 +120,10 @@ public class AutoHarvestPlugin extends JavaPlugin implements Listener {
             }
         }
 
-        // Feedback
+        // Feedback sonoro, sin mensajes en chat
         if (harvested > 0) {
             player.playSound(player.getLocation(), Sound.BLOCK_CROP_BREAK, 1f, 1f);
-            player.sendMessage("§aCosechados " + harvested + " cultivos. Replantados: " + replanted + ".");
         }
-    }
-
-    // Comprueba si el material es una azada
-    private boolean isHoe(Material mat) {
-        return mat == Material.WOODEN_HOE
-                || mat == Material.STONE_HOE
-                || mat == Material.IRON_HOE
-                || mat == Material.GOLDEN_HOE
-                || mat == Material.DIAMOND_HOE
-                || mat == Material.NETHERITE_HOE;
     }
 
     // Comprueba si el jugador tiene al menos una unidad del material indicado
